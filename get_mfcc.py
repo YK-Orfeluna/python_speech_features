@@ -18,7 +18,6 @@ def read_pcm(pcmname) :
 		data = np.frombuffer(data, np.int16)
 	return data
 
-
 if __name__ == "__main__" :
 	from sys import argv
 
@@ -26,6 +25,8 @@ if __name__ == "__main__" :
 	#rate, data = read_wav(wavname)
 
 	pcmlist = argv[1]
+	sec = float(argv[2])
+
 	with open(pcmlist, "r") as fd :
 		pcmnames = fd.read().strip().split("\n")
 	pcmnames.sort()
@@ -42,7 +43,10 @@ if __name__ == "__main__" :
 
 	for x, pcmname in enumerate(pcmnames) :
 		data = read_pcm(pcmname)
+
+		n = rate * sec
 		data = data[: n]
+
 		print("[%s]\nstart: open %s" %(ctime(), pcmname))
 
 		mfcc_feature = mfcc(data, rate, winlen=length, winstep=step, numcep=n_feature)
