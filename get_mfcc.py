@@ -4,7 +4,15 @@
 	https://github.com/jameslyons/python_speech_features
 	↑を利用中
 	
-	$1: pcmlist
+	$1: pcmlist（必須）
+	$2: 冒頭無発話区間（autoとすることで，[0.5, 1, 2, 3, 4, 5, 10]秒をそれぞれ実行）
+		デフォルトはauto
+	$3: 計算区間（ミリ秒）
+		デフォルトは20
+	$4: 計算区間の移動幅（ミリ秒）
+		デフォルトは10
+	$5: 次元数
+		デフォルトは12
 
 	pcmlistから，読むこむpcmファイルを判断
 	pcmファイルの冒頭[0.5, 1, 2, 3, 4, 5, 10]秒を無発話区間として
@@ -35,7 +43,7 @@ def read_pcm(pcmname) :								# pcmファイルを読み込んで，信号を�
 	return data
 
 def run(sec) :
-	n = rate * sec
+	n = int(rate * sec)								# 冒頭無発話区間とフレームレートをかけあわせて，計算範囲だけを残す
 
 	for x, pcmname in enumerate(pcmnames) :
 			data = read_pcm(pcmname)				# pcmファイルを読み込み
@@ -76,36 +84,60 @@ if __name__ == "__main__" :
 	from sys import argv
 	from multiprocessing import Pool, cpu_count
 
-	if len(argv) != 2 :
-		exit("Error: missing args\narg: [pcm-list]")
+	if len(argv) != 6 and len(argv) != 2 :
+		exit("Error: missing args\narg: [pcm-list] [[sec.] [[length] [[step] [[n_features]]]]]")
 
 	#wavname = "english.wav"
 	#rate, data = read_wav(wavname)
 
-	pcmlist = argv[1]
-	#sec = float(argv[2])
-	sec = (0.5, 1, 2, 3, 4, 5, 10)
+	if len(argv) >= 2 :
+		pcmlist = argv[1]			# 読み込むpcmlist名
+		sec = "auto"
+		length = 20
+		step = 10
+		n_feature = 12				# 特徴量の次元数
+
+	if len(argv) >= 3 :
+		sec = argv[2]
+
+	if len(argv) >= 4 :
+		length = int(argv[3])
+
+	if len(argv) >= 5 :
+	 	step = int(arg[4])
+
+	if len(argv) == 6 :
+		n_feature = int(argv[5])
+
+	if sec == "auto" :				# 冒頭無発話区間の設定
+		sec = (0.5, 1, 2, 3, 4, 5, 10)
+	else :
+		sec = (float(sec))
+
+	length /= 1000.0				# 特徴量計算時間幅（秒→ミリ秒）
+	step /= 1000.0					# 特徴量計算時間移動幅（秒→ミリ秒）
 
 	with open(pcmlist, "r") as fd :
 		pcmnames = fd.read().strip().split("\n")
-	pcmnames.sort()
+		pcmnames.sort()
 
-	rate = 16000			# pcmファイルのフレームレート
+	rate = 16000					# pcmファイルのフレームレート
 
-	length = 20				# MFCCを計算する区間（ミリsec.）
-	length /= 1000.0		# ミリsec.からsec.に変換
+	njobs = len(sec)				# njobsを決める（万が一，nCPUを超えたら調整）
+	
+	if njobs == 1 :
+		run(sec[0])
 
-	step = 10				# MFCCを計算する区間の移動幅（ミリsec.）
-	step /= 1000.0			# ミリsec.からsec.に変換
+	elif njobs > 1 :
+		if njobs > cpu_count() :	# njobsがnCPUを超えたら調整
+			njobs = cpu_count()
 
-	n_feature = 12			# MFCCとデルタの次元数
+		for s in sec :				# 回して回せば回す時
+			p = Pool(njobs)
+			p.map(run, s)
 
-	njobs = len(sec)		# njobsを決める（万が一，nCPUを超えたら調整）
-	if njobs > cpu_count() :
-		njobs = cpu_count()
+	else :
+		exit("Error: no jobs")
 
-	for s in sec :			# 回して回せば回す時
-		p = Pool(njobs)
-		p.map(run, s)
 
 	exit("done: process")
