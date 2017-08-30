@@ -56,10 +56,14 @@ def run(sec) :
 			mfcc_feature = mfcc(data, rate, winlen=length, winstep=step, numcep=n_feature)
 			mfcc_mean = np.mean(mfcc_feature.T, axis=1).astype(np.str)
 
-			#MFCCからデルタとその平均を求める
+			# MFCCからデルタとその平均を求める
 			d_mfcc_feat = delta(mfcc_feature, 2)
 			d_mfcc_mean = np.mean(d_mfcc_feat.T, axis=1).astype(np.str)
 			#print(d_mfcc_mean)
+
+			# delta-deltaを計算する
+			#d2_mfcc_feat = delta(d_mfcc_feat, 2)
+			#d2_mfcc_mean = np.mean(d2_mfcc_feat.T, axis=1).astype(np.str)
 
 			# 結果（pcmファイル名，MFCC，デルタ）をまとめる
 			rslt = np.array([pcmname], dtype=np.str)
